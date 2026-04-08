@@ -4,7 +4,7 @@ Training materials for learning the [ChipFlow platform](https://build.chipflow.c
 
 ## What's included
 
-- **[Getting Started — Writing an Amaranth Design](getting-started-design.md)** — how to create a new design from scratch for the ChipFlow platform
+- **[Creating a Design for Use with the ChipFlow Platform](getting-started-design.md)** — how to create a new design from scratch for the ChipFlow platform
 - **Upcounter example** — a simple Amaranth HDL design targeting the IHP SG13G2 130nm process, ready to build and submit to the platform
 - **[Training Command Reference](training-commands.md)** — step-by-step guide covering prerequisites, setup, authentication, building, and submitting designs
 - **[chipflow.toml Reference](chipflow-toml-reference.md)** — complete configuration format documentation

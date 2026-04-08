@@ -1,4 +1,4 @@
-# Getting Started — Writing an Amaranth Design for ChipFlow
+# Creating a Design for Use with the ChipFlow Platform
 
 This guide walks you through creating a new hardware design using [Amaranth HDL](https://amaranth-lang.org/) and submitting it to the [ChipFlow platform](https://build.chipflow.com) for RTL-to-GDS silicon build.
 
