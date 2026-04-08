@@ -374,9 +374,6 @@ The Makefile in this repository sets `CHIPFLOW_ROOT` automatically for each desi
 | Process | Value in chipflow.toml |
 |---------|----------------------|
 | IHP 130nm SiGe BiCMOS | `ihp_sg13g2` |
-| Skywater 130nm | `sky130` |
-| GlobalFoundries 180nm | `gf180` |
-| GlobalFoundries 130nm BCD | `gf130bcd` |
 
 ---
 
