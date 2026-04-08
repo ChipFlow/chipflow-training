@@ -4,17 +4,6 @@ project_name = "upcounter"
 [chipflow.top]
 soc = "design.design:MySoC"
 
-[chipflow.clocks]
-default = 'sys_clk'
-
-[chipflow.resets]
-default = 'sys_rst_n'
-
 [chipflow.silicon]
 process = "ihp_sg13g2"
 package = "pga144"
-
-[chipflow.silicon.pads]
-# System
-sys_clk   = { type = "clock", loc = "114" }
-sys_rst_n = { type = "reset", loc = "115" }

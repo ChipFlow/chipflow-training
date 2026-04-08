@@ -325,7 +325,47 @@ make clean
 | `chipflow auth login` | Authenticate with the platform |
 | `chipflow auth logout` | Remove saved credentials |
 
-All `chipflow` commands require either `CHIPFLOW_ROOT=<design_dir>` environment variable or being run from within a design directory.
+All `chipflow` commands require either `CHIPFLOW_ROOT=<design_dir>` environment variable or being run from within a design directory. See the [CHIPFLOW_ROOT](#chipflow_root) section for details.
+
+---
+
+## CHIPFLOW_ROOT
+
+The `CHIPFLOW_ROOT` environment variable tells `chipflow` which directory contains your design's `chipflow.toml`. This is useful when you keep multiple designs as sub-folders within a single repository:
+
+```
+my-project/
+├── Makefile
+├── pyproject.toml
+├── upcounter/
+│   ├── chipflow.toml
+│   └── design/
+├── rom/
+│   ├── chipflow.toml
+│   └── design/
+└── sram/
+    ├── chipflow.toml
+    └── design/
+```
+
+In this layout, you run commands from the repo root and point `CHIPFLOW_ROOT` at the design you want to build:
+
+```bash
+# Build the upcounter design
+CHIPFLOW_ROOT=upcounter uv run chipflow silicon prepare
+
+# Build the rom design
+CHIPFLOW_ROOT=rom uv run chipflow silicon prepare
+```
+
+If `CHIPFLOW_ROOT` is **not set**, `chipflow` uses the current working directory as the design root. This works fine when your repo contains only a single design or when you `cd` into the design directory first:
+
+```bash
+cd upcounter
+uv run chipflow silicon prepare
+```
+
+The Makefile in this repository sets `CHIPFLOW_ROOT` automatically for each design target, so `make upcounter-submit` just works from the repo root.
 
 ---
 
