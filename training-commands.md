@@ -101,11 +101,11 @@ gh auth refresh -h github.com -s user
 
 ## Part 1: Clone and Set Up
 
-### Clone the examples repository
+### Clone the training repository
 
 ```bash
-git clone https://github.com/ChipFlow/chipflow-test-socs.git
-cd chipflow-test-socs
+git clone https://github.com/ChipFlow/chipflow-training.git
+cd chipflow-training
 ```
 
 ### Install dependencies
@@ -123,23 +123,15 @@ This runs `uv sync`, which installs Python dependencies including `chipflow-lib`
 Each design lives in its own directory. For example, the `upcounter` design:
 
 ```
-chipflow-test-socs/
+chipflow-training/
 ├── Makefile                    # Build commands for all designs
 ├── pyproject.toml              # Python project config + dependencies
-├── upcounter/
-│   ├── chipflow.toml           # ChipFlow config (process, package)
-│   ├── design/
-│   │   └── design.py           # Amaranth HDL design code
-│   ├── pins.lock               # Deterministic pin assignments (auto-generated)
-│   └── build/                  # Build outputs (created after prepare)
-├── rom/
-│   ├── chipflow.toml
-│   └── design/
-│       └── design.py
-└── sram/
-    ├── chipflow.toml
-    └── design/
-        └── design.py
+└── upcounter/
+    ├── chipflow.toml           # ChipFlow config (process, package)
+    ├── design/
+    │   └── design.py           # Amaranth HDL design code
+    ├── pins.lock               # Deterministic pin assignments (auto-generated)
+    └── build/                  # Build outputs (created after prepare)
 ```
 
 ### View a design
@@ -279,13 +271,6 @@ make upcounter/pins.lock
 make upcounter-submit
 ```
 
-Or for other designs:
-
-```bash
-make rom-submit
-make sram-submit
-```
-
 ### Option B: Using chipflow commands directly
 
 ```bash
@@ -352,8 +337,6 @@ make clean
 | `make upcounter` | Pin lock + prepare RTLIL for upcounter |
 | `make upcounter-submit` | Pin lock + prepare + submit to platform |
 | `make upcounter-clean` | Delete upcounter build outputs |
-| `make rom-submit` | Build and submit the ROM design |
-| `make sram-submit` | Build and submit the SRAM design |
 | `make lint` | Run code style checks on all designs |
 | `make clean` | Clean all build outputs |
 
