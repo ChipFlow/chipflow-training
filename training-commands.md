@@ -164,13 +164,13 @@ package = "pga144"
 
 ## Part 3: Authenticate with ChipFlow Platform
 
-There are two ways to authenticate. Choose whichever suits your setup.
+You do not need to create a ChipFlow account manually — your account is created automatically the first time you log in. There are two ways to authenticate. Choose whichever suits your setup.
 
 ### <u>Option A: GitHub CLI (recommended)</u>
 
 If you have `gh` installed and authenticated (see Prerequisites), authentication happens automatically. When you run a submit command, chipflow-lib will:
 1. Detect your `gh` CLI token
-2. Exchange it for a ChipFlow API key
+2. Exchange it for a ChipFlow API key (creating your ChipFlow account on first use)
 3. Save it to `~/.config/chipflow/credentials`
 
 ```bash
@@ -182,7 +182,7 @@ CHIPFLOW_ROOT=upcounter uv run chipflow auth login
 
 If you don't have `gh` installed, you can set the API key directly:
 
-1. Log in to https://build.chipflow.com
+1. Log in to https://build.chipflow.com (your account is created automatically on first login)
 2. Go to your profile / API keys
 3. Generate a new API key
 4. Set it as an environment variable:
