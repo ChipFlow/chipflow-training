@@ -222,6 +222,49 @@ uv run chipflow auth logout
 
 ---
 
+## Pin Assignment and pins.lock
+
+Before a design can be submitted for a silicon build, each signal in your design must be mapped to a physical pin on the chip package. The `chipflow pin lock` command handles this automatically.
+
+### How it works
+
+1. ChipFlow scans your design's I/O interfaces (the `InputIOSignature` and `OutputIOSignature` declarations).
+2. It counts how many physical pins each port needs based on its bit-width.
+3. It allocates pins from the package (e.g., `pga144`) in a deterministic order, grouping multi-bit signals on contiguous pins where possible.
+4. The result is written to `pins.lock` in your design directory.
+
+### What's in pins.lock
+
+`pins.lock` is a JSON file that records the mapping between your design's ports and physical package pins. It includes:
+
+- **Process and package** — which silicon process and package the assignment targets.
+- **Port map** — each design port with its assigned pin numbers, direction, width, and clock domain.
+- **Bringup pins** — system pins (clock, reset, JTAG, power) that are assigned to fixed locations on every package to aid board bringup.
+
+### When to regenerate
+
+The lock file is meant to stay **stable across builds** — once pins are assigned, they don't change. This lets you design a PCB against a known pinout. You only need to regenerate it when:
+
+- You **add or remove** ports in your design.
+- You **change the bit-width** of an existing port (this will raise an error until you regenerate).
+- You want a **fresh allocation** from scratch.
+
+To regenerate, delete the lock file and re-run:
+
+```bash
+rm upcounter/pins.lock
+CHIPFLOW_ROOT=upcounter uv run chipflow pin lock
+```
+
+### Notes
+
+- Pin assignment is **automatic** — you cannot manually assign specific signals to specific pins.
+- The default package is `pga144`, which has 144 total pins. Some are reserved for system use (clock, reset, JTAG, power rails), leaving roughly 120 pins available for your design's I/O. Other packages can be added by request — contact the ChipFlow team.
+- Pins are numbered anti-clockwise starting from pin 1 at the top-left corner.
+- The `pins.lock` file should be **committed to version control** so that everyone on the team works with the same pinout.
+
+---
+
 ## Part 4: Build and Submit a Design
 
 ### Option A: Using Make (recommended)
@@ -374,6 +417,8 @@ The Makefile in this repository sets `CHIPFLOW_ROOT` automatically for each desi
 | Process | Value in chipflow.toml |
 |---------|----------------------|
 | IHP 130nm SiGe BiCMOS | `ihp_sg13g2` |
+
+Other processes may be available on request. If your target process is not yet supported, the ChipFlow team can work with you to port it to the platform — contact us for details.
 
 ---
 
