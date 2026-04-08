@@ -1,0 +1,7 @@
+*.pdf
+__pycache__/
+*.pyc
+build/
+pins.lock
+.venv/
+uv.lock

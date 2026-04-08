@@ -1,0 +1,28 @@
+# Project metadata
+
+[project]
+name = "chipflow-training"
+version = "0.0.0"
+description = "ChipFlow training material"
+authors = [
+    {name = "Serge Rabyking", email = "serge.rabyking@chipflow.io"},
+    {name = "Robert Taylor", email = "rob.taylor@chipflow.io"},
+]
+license = {file = "LICENSE.md"}
+
+requires-python = ">=3.12,<3.14.0"
+dependencies = [
+  "amaranth[builtin-yosys]>=0.5.1",
+  "chipflow-lib @ git+https://github.com/ChipFlow/chipflow-lib.git",
+]
+
+# Development workflow configuration
+
+[dependency-groups]
+test = [
+  "pytest~=7.2.0",
+]
+lint = [
+  "pycodestyle~=2.9.1",
+  "autopep8~=2.0.0",
+]
