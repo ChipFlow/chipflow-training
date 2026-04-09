@@ -6,10 +6,10 @@ Training materials for learning the [ChipFlow platform](https://build.chipflow.c
 
 - **[Creating a Design for Use with the ChipFlow Platform](getting-started-design.md)** — how to create a new design from scratch for the ChipFlow platform
 - **Upcounter example** — a simple Amaranth HDL design targeting the IHP SG13G2 130nm process, ready to build and submit to the platform
-- **[Upcounter Simulation Walkthrough](upcounter-walkthrough.md)** — step-by-step guide to simulating the upcounter with waveforms
 - **[Training Command Reference](training-commands.md)** — step-by-step guide covering prerequisites, setup, authentication, building, and submitting designs
 - **[chipflow.toml Reference](chipflow-toml-reference.md)** — complete configuration format documentation
 - **[Simulation](simulation.md)** — testing designs locally with CXXRTL-based simulation
+- **[Upcounter Simulation Walkthrough](upcounter-walkthrough.md)** — step-by-step guide to simulating the upcounter with waveforms
 
 ## Quick start
 
