@@ -22,7 +22,7 @@ $(1)-clean:
 
 .PHONY: $(1)-lint
 $(1)-lint:
-	cd $(strip $(1))/design && uv run pycodestyle --config=../../.pycodestyle .
+	cd $(strip $(1))/design && uv run --group lint pycodestyle --config=../../.pycodestyle .
 
 clean: $(1)-clean
 endef
@@ -31,4 +31,4 @@ $(eval $(call soc_target, upcounter))
 
 .PHONY: lint # Lint code
 lint:
-	uv run pycodestyle --config=./.pycodestyle upcounter/
+	uv run --group lint pycodestyle --config=./.pycodestyle upcounter/
