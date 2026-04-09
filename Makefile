@@ -16,6 +16,10 @@ $(1): $(strip $(1))/pins.lock
 $(1)-submit: $(1)
 	@CHIPFLOW_ROOT=$(strip $(1)) PYTHONPATH=$PYTHONPATH:${PWD} uv run chipflow silicon submit
 
+.PHONY: $(1)-submit-wait # Submit RTLIL for build
+$(1)-submit-wait: $(1)
+	@CHIPFLOW_ROOT=$(strip $(1)) PYTHONPATH=$PYTHONPATH:${PWD} uv run chipflow silicon submit --wait
+
 .PHONY: $(1)-clean # clean the design
 $(1)-clean:
 	rm -fr $(strip $(1))/build
@@ -28,7 +32,3 @@ clean: $(1)-clean
 endef
 
 $(eval $(call soc_target, upcounter))
-
-.PHONY: lint # Lint code
-lint:
-	uv run --group lint pycodestyle --config=./.pycodestyle upcounter/
