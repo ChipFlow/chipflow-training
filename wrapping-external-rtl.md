@@ -145,19 +145,21 @@ Then add the generated `.v` file via `platform.add_file("my_module.v", …)` as 
 
 It also handles source preprocessing: `.sv` files via sv2v, Verilog generated from SpinalHDL (via `sbt`), or SystemVerilog via Yosys' slang frontend.
 
-### Port naming convention
+### How port names work
 
-The wrapper expects the external Verilog module to follow ChipFlow's direction-prefix naming:
+Verilog port names are whatever the author chose — ChipFlow doesn't dictate them. The `i_` / `o_` / `io_` prefixes you see throughout this doc are *Amaranth Instance kwarg prefixes*: they tag direction on the Python side, and Amaranth strips them to get the underlying Verilog port name.
 
-| Prefix | Meaning |
-|--------|---------|
-| `i_` | input port |
-| `o_` | output port |
-| `io_` | bidirectional port |
+So for a Verilog port `data_bus`:
 
-In TOML, you reference ports **without the prefix** — the wrapper adds it. If the Verilog port is `i_clk`, the TOML entry is `clk`.
+- **Input:** Amaranth kwarg is `i_data_bus = <signal>` — the `i_` is Amaranth's direction tag, not part of the Verilog port.
+- **Output:** `o_data_bus = <signal>`.
+- **Bidir:** `io_data_bus = <signal>`.
 
-If your external RTL doesn't use these prefixes, you either need to rename the ports in a thin wrapper `.v` file, or use the manual `Instance(...)` approach described above.
+`RTLWrapper` follows the same rule. In TOML:
+
+- `[clocks]` and `[resets]` entries give the **Verilog port name as written** — the wrapper adds the `i_` direction tag internally when building the Instance call.
+- `[ports.X]` / `[pins.X]` explicit `map` values are the full Amaranth Instance kwarg, so they include the `i_` / `o_` / `io_` direction tag. The text after the prefix is the Verilog port name.
+- For known bus interfaces (Wishbone, CSR, UART, SPI, I2C, GPIO), the wrapper can auto-infer the mapping by matching patterns against the parsed Verilog ports.
 
 ### Minimal example: a Wishbone timer
 
@@ -165,19 +167,19 @@ Assume you have a Verilog peripheral `wb_timer.v` with this port list:
 
 ```verilog
 module wb_timer (
-    input  wire        i_clk,
-    input  wire        i_rst_n,
+    input  wire        clk,
+    input  wire        rst_n,
     // Wishbone classic slave
-    input  wire        i_wb_cyc,
-    input  wire        i_wb_stb,
-    input  wire        i_wb_we,
-    input  wire [3:0]  i_wb_adr,
-    input  wire [31:0] i_wb_dat_w,
-    input  wire [3:0]  i_wb_sel,
-    output wire        o_wb_ack,
-    output wire [31:0] o_wb_dat_r,
+    input  wire        wb_cyc,
+    input  wire        wb_stb,
+    input  wire        wb_we,
+    input  wire [3:0]  wb_adr,
+    input  wire [31:0] wb_dat_w,
+    input  wire [3:0]  wb_sel,
+    output wire        wb_ack,
+    output wire [31:0] wb_dat_r,
     // Interrupt line
-    output wire        o_irq
+    output wire        irq
 );
 ```
 
@@ -190,20 +192,29 @@ name = "wb_timer"
 path = "./rtl"              # directory scanned for .v / .sv sources
 
 [clocks]
-sys = "clk"                  # i_clk, connected to ClockSignal() of "sync" domain
-
+sys = "clk"                  # Verilog port "clk" — wrapper wires it to ClockSignal() via i_clk
 [resets]
-sys = "rst_n"                # i_rst_n, connected to ~ResetSignal()
+sys = "rst_n"                # Verilog port "rst_n" — wired to ~ResetSignal() via i_rst_n
 
 [ports.bus]
 interface = "amaranth_soc.wishbone.Signature"
 params = { addr_width = 4, data_width = 32, granularity = 8 }
-# No `map` — auto-inferred from Wishbone signal names (i_wb_cyc, o_wb_ack, ...)
+# Each map value is an Amaranth Instance kwarg: direction tag + Verilog port name.
+map = { cyc   = "i_wb_cyc",
+        stb   = "i_wb_stb",
+        we    = "i_wb_we",
+        adr   = "i_wb_adr",
+        dat_w = "i_wb_dat_w",
+        sel   = "i_wb_sel",
+        ack   = "o_wb_ack",
+        dat_r = "o_wb_dat_r" }
 
 [pins.irq]
 interface = "amaranth.lib.wiring.Out(1)"
-map = "o_irq"                # explicit mapping for a simple 1-bit signal
+map = "o_irq"                # direction tag "o_" + Verilog port name "irq"
 ```
+
+For common bus interfaces (`amaranth_soc.wishbone.Signature`, `amaranth_soc.csr.Signature`) and pin interfaces (UART / SPI / I2C / GPIO from `chipflow.platform`), the wrapper can skip the `map` field when the Verilog port names follow predictable patterns that already include a direction tag (e.g., `i_wb_cyc`, `o_wb_ack`). When names are bare (`wb_cyc`, `wb_ack`) or follow a different convention, provide `map` explicitly as above.
 
 ### Using the wrapper in a design
 
