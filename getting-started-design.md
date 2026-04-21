@@ -291,7 +291,7 @@ MySoC = MyDesign
 
 ### SystemVerilog
 
-`.sv` files are also accepted by `platform.add_file()` — the platform dispatches on extension and passes SystemVerilog sources to Yosys with `read_verilog -sv`. The `Instance(...)` wrapping is identical to plain Verilog.
+`.sv` files are accepted by `platform.add_file()` — the platform dispatches on extension and passes SystemVerilog sources to Yosys with `read_verilog -sv`. The `Instance(...)` wrapping is identical to plain Verilog.
 
 ```python
 sv_path = pathlib.Path(__file__).parent / "my_module.sv"
@@ -300,7 +300,27 @@ platform.add_file(sv_path.name, sv_path.read_text())
 
 Supported extensions: `.v`, `.vh`, `.sv`.
 
-This uses Yosys' built-in SystemVerilog support, which covers the synthesisable subset: `logic`, `typedef`, packed `struct` / `enum`, `always_ff` / `always_comb`, generate blocks, and basic interfaces. Non-synthesisable constructs (classes, randomisation, `covergroup`, UVM-style testbenches, most concurrent assertions) are not supported — but these aren't needed for the RTL handed to the platform.
+**The built-in parser is limited.** Yosys' `read_verilog -sv` handles simple SV (`logic`, `always_ff` / `always_comb`, generate blocks, basic typedefs) but does **not** accept SystemVerilog package imports (`import pkg::*;`) in any position. Most real-world SV IP — including the OpenHW Group CV32E40P and similar cores — uses packages heavily and will not parse through this path. Non-synthesisable SV (classes, `covergroup`, UVM, most concurrent assertions) isn't needed for synthesis and also isn't supported.
+
+**For SV IP that uses packages, interfaces, typedefs, or packed structs,** preprocess the sources with [sv2v](https://github.com/zachjs/sv2v) first:
+
+```bash
+sv2v -I<include_dirs> my_module.sv > my_module.v
+```
+
+Then add the generated `.v` file via `platform.add_file("my_module.v", …)` as with plain Verilog. sv2v desugars packages, interfaces, and typedefs into Verilog 2005, which Yosys reads cleanly.
+
+### Wrapping external RTL via TOML (`RTLWrapper`)
+
+`chipflow.rtl.wrapper` offers a higher-level alternative to hand-written `Instance(...)` wrapping. A TOML file describes the external module — source files, clocks/resets, ports, and their mapping to Amaranth interface signatures (Wishbone, CSR, UART, I2C, SPI, GPIO). Port-name patterns are auto-inferred from the Verilog where possible.
+
+It also has built-in preprocessing hooks for:
+
+- **SpinalHDL** — runs `sbt` to generate Verilog from a Scala project.
+- **sv2v** — runs sv2v on a directory of `.sv` files (sv2v must be in `PATH`).
+- **yosys-slang** — uses Yosys' slang frontend (fully supported in native Yosys with the slang plugin).
+
+Entry point: `chipflow.rtl.wrapper.load_wrapper_from_toml(path)`. This returns a `wiring.Component` you can instantiate in your design. See `chipflow/rtl/wrapper.py` in the installed package for the TOML schema (`ExternalWrapConfig`).
 
 ---
 
