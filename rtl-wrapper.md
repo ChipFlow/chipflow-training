@@ -164,7 +164,7 @@ Generators available:
 | `generator` | Tool used | Needs |
 |-------------|-----------|-------|
 | `verilog` | none (files used as-is) | — |
-| `systemverilog` | `sv2v` | `sv2v` binary in `PATH` |
+| `systemverilog` | `sv2v` | `sv2v` binary in `PATH` ([install](https://github.com/zachjs/sv2v#installation)) |
 | `yosys_slang` | Yosys' slang frontend | Native Yosys with slang plugin (override `yosys_command` in the config); yowasp-yosys's bundled slang currently can't spawn threads and fails on non-trivial designs |
 | `spinalhdl` | `sbt` | Scala/sbt toolchain |
 
