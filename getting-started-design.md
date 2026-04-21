@@ -289,6 +289,19 @@ MySoC = MyDesign
 - The Verilog module is synthesised by Yosys alongside the Amaranth-generated RTL — no separate compilation step is needed.
 - If your Verilog module uses parameters, pass them with the `p_` prefix: `p_WIDTH=8`.
 
+### SystemVerilog
+
+`.sv` files are also accepted by `platform.add_file()` — the platform dispatches on extension and passes SystemVerilog sources to Yosys with `read_verilog -sv`. The `Instance(...)` wrapping is identical to plain Verilog.
+
+```python
+sv_path = pathlib.Path(__file__).parent / "my_module.sv"
+platform.add_file(sv_path.name, sv_path.read_text())
+```
+
+Supported extensions: `.v`, `.vh`, `.sv`.
+
+This uses Yosys' built-in SystemVerilog support, which covers the synthesisable subset: `logic`, `typedef`, packed `struct` / `enum`, `always_ff` / `always_comb`, generate blocks, and basic interfaces. Non-synthesisable constructs (classes, randomisation, `covergroup`, UVM-style testbenches, most concurrent assertions) are not supported — but these aren't needed for the RTL handed to the platform.
+
 ---
 
 ## Complete example
