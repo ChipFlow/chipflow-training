@@ -312,15 +312,158 @@ Then add the generated `.v` file via `platform.add_file("my_module.v", …)` as 
 
 ### Wrapping external RTL via TOML (`RTLWrapper`)
 
-`chipflow.rtl.wrapper` offers a higher-level alternative to hand-written `Instance(...)` wrapping. A TOML file describes the external module — source files, clocks/resets, ports, and their mapping to Amaranth interface signatures (Wishbone, CSR, UART, I2C, SPI, GPIO). Port-name patterns are auto-inferred from the Verilog where possible.
+`chipflow.rtl.wrapper` provides a higher-level alternative to hand-written `Instance(...)` wrapping. Instead of writing Python to connect ports manually, you describe the external module in a TOML file — source files, clocks/resets, bus ports, and pad pins — and get back a `wiring.Component` ready to use in your design.
 
-It also has built-in preprocessing hooks for:
+It also handles source preprocessing: `.sv` files via sv2v, Verilog generated from SpinalHDL (via `sbt`), or SystemVerilog via Yosys' slang frontend.
 
-- **SpinalHDL** — runs `sbt` to generate Verilog from a Scala project.
-- **sv2v** — runs sv2v on a directory of `.sv` files (sv2v must be in `PATH`).
-- **yosys-slang** — uses Yosys' slang frontend (fully supported in native Yosys with the slang plugin).
+#### Port naming convention
 
-Entry point: `chipflow.rtl.wrapper.load_wrapper_from_toml(path)`. This returns a `wiring.Component` you can instantiate in your design. See `chipflow/rtl/wrapper.py` in the installed package for the TOML schema (`ExternalWrapConfig`).
+The wrapper expects the external Verilog module to follow ChipFlow's direction-prefix naming:
+
+| Prefix | Meaning |
+|--------|---------|
+| `i_` | input port |
+| `o_` | output port |
+| `io_` | bidirectional port |
+
+In TOML, you reference ports **without the prefix** — the wrapper adds it. If the Verilog port is `i_clk`, the TOML entry is `clk`.
+
+If your external RTL doesn't use these prefixes, you either need to rename the ports in a thin wrapper `.v` file, or use the manual `Instance(...)` approach described above.
+
+#### Minimal example: a Wishbone timer
+
+Assume you have a Verilog peripheral `wb_timer.v` with this port list:
+
+```verilog
+module wb_timer (
+    input  wire        i_clk,
+    input  wire        i_rst_n,
+    // Wishbone classic slave
+    input  wire        i_wb_cyc,
+    input  wire        i_wb_stb,
+    input  wire        i_wb_we,
+    input  wire [3:0]  i_wb_adr,
+    input  wire [31:0] i_wb_dat_w,
+    input  wire [3:0]  i_wb_sel,
+    output wire        o_wb_ack,
+    output wire [31:0] o_wb_dat_r,
+    // Interrupt line
+    output wire        o_irq
+);
+```
+
+The TOML wrapper config (`wb_timer.toml`):
+
+```toml
+name = "wb_timer"
+
+[files]
+path = "./rtl"              # directory scanned for .v / .sv sources
+
+[clocks]
+sys = "clk"                  # i_clk, connected to ClockSignal() of "sync" domain
+
+[resets]
+sys = "rst_n"                # i_rst_n, connected to ~ResetSignal()
+
+[ports.bus]
+interface = "amaranth_soc.wishbone.Signature"
+params = { addr_width = 4, data_width = 32, granularity = 8 }
+# No `map` — auto-inferred from Wishbone signal names (i_wb_cyc, o_wb_ack, ...)
+
+[pins.irq]
+interface = "amaranth.lib.wiring.Out(1)"
+map = "o_irq"                # explicit mapping for a simple 1-bit signal
+```
+
+#### Using the wrapper in a design
+
+```python
+from amaranth import Module
+from amaranth.lib import wiring
+from chipflow.rtl.wrapper import load_wrapper_from_toml
+
+
+class MyDesign(wiring.Component):
+    # ... signature omitted
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # Load the Verilog peripheral as a Component
+        m.submodules.timer = timer = load_wrapper_from_toml("wb_timer.toml")
+
+        # `timer.bus` is a Wishbone interface; `timer.irq` is a 1-bit output.
+        # Connect them to the rest of your design (e.g., a Wishbone decoder).
+        ...
+
+        return m
+
+
+MySoC = MyDesign
+```
+
+The wrapper automatically:
+
+1. Adds the source files via `platform.add_file()`.
+2. Creates an `Instance(...)` with all port connections.
+3. Hooks clock/reset to the `sync` domain (reset is inverted for active-low `rst_n`).
+4. Attaches a `MemoryMap` to any Wishbone port so it can be added to a decoder.
+
+#### Key TOML sections
+
+| Section | Purpose |
+|---------|---------|
+| `name` | Verilog module name (used as `Instance` type) |
+| `[files]` | Either `path = "./rtl"` (directory) or `module = "some.python.module"` (resource-packaged RTL) |
+| `[clocks]` / `[resets]` | Map Amaranth clock domain name → Verilog port (without `i_` prefix). Domain `sys` means the default `sync` domain. |
+| `[ports.<name>]` | Bus interfaces (Wishbone, CSR). Default direction `in` (master connects into this component). |
+| `[pins.<name>]` | Pad-facing interfaces (UART, SPI, I2C, GPIO, or simple `Out(N)`/`In(N)`). Default direction `out`. |
+| `[generate]` | Optional: preprocess sources before handing to Yosys. |
+| `[driver]` | Optional: generate C header/struct for software access. |
+
+Auto-mapping is built in for these interfaces — the wrapper parses the Verilog and matches well-known signal name patterns:
+
+- `amaranth_soc.wishbone.Signature` (`cyc`, `stb`, `we`, `adr`, `dat_w`, `dat_r`, `ack`, …)
+- `amaranth_soc.csr.Signature`
+- `chipflow.platform.UARTSignature`, `SPISignature`, `I2CSignature`, `GPIOSignature`
+
+For other interfaces, or when the Verilog uses non-standard names, provide an explicit `map` in TOML.
+
+#### Preprocessing SystemVerilog sources
+
+If your external RTL is SystemVerilog that uses packages/interfaces/typedefs, add a `[generate]` section to preprocess it:
+
+```toml
+name = "fancy_peripheral"
+
+[files]
+path = "./rtl"
+
+[generate]
+generator = "systemverilog"   # = run sv2v
+
+[generate.sv2v]
+include_dirs = ["./rtl/include"]
+defines = { SYNTHESIS = "1" }
+top_module = "fancy_peripheral"
+
+[clocks]
+sys = "clk"
+
+# ...ports and pins as usual
+```
+
+Generators available:
+
+| `generator` | Tool used | Needs |
+|-------------|-----------|-------|
+| `verilog` | none (files used as-is) | — |
+| `systemverilog` | `sv2v` | `sv2v` binary in `PATH` |
+| `yosys_slang` | Yosys' slang frontend | Native Yosys with slang plugin (override `yosys_command` in the config); yowasp-yosys's bundled slang currently can't spawn threads and fails on non-trivial designs |
+| `spinalhdl` | `sbt` | Scala/sbt toolchain |
+
+The generated Verilog is written to `./build/verilog/<name>.v` by default and fed to the synthesis flow automatically — you don't need to call `add_file` yourself.
 
 ---
 
