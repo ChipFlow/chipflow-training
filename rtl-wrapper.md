@@ -135,6 +135,29 @@ Auto-mapping is built in for these interfaces — the wrapper parses the Verilog
 
 For other interfaces, or when the Verilog uses non-standard names, provide an explicit `map` in TOML.
 
+## Verilog module parameters
+
+Verilog `parameter` / `localparam` values can be overridden from TOML, from Python, or both. Declare defaults in the TOML `[parameters]` table:
+
+```toml
+name = "wb_timer"
+
+[parameters]
+DATA_WIDTH = 32
+ADDR_WIDTH = 4
+```
+
+At load time, pass a `parameters=` kwarg to override specific values. The Python kwarg wins on collisions; parameters you don't mention fall back to the TOML defaults:
+
+```python
+# DATA_WIDTH=64 (override), ADDR_WIDTH=4 (TOML default)
+timer = load_wrapper_from_toml("wb_timer.toml", parameters={"DATA_WIDTH": 64})
+```
+
+The merged set is emitted as `p_<NAME>=<value>` kwargs on the `Instance(...)` at elaboration — equivalent to `Instance("wb_timer", p_DATA_WIDTH=64, p_ADDR_WIDTH=4, …)`.
+
+When a `[generate]` section is present, the merged parameters are also fed into the generator's template substitution, so SpinalHDL Scala args, sv2v `-D` defines, and yosys-slang `-D` / `--top` placeholders all see the final values. The same `{name}` substitution works in `[ports.*] params = { … }` — writing `params = { addr_width = "{ADDR_WIDTH}" }` resolves against the merged parameters.
+
 ## Preprocessing SystemVerilog sources
 
 If your external RTL is SystemVerilog that uses packages/interfaces/typedefs, add a `[generate]` section to preprocess it:

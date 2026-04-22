@@ -96,6 +96,16 @@ generator = "systemverilog"   # preprocess with sv2v
 include_dirs = ["./cv32e40p/rtl/include"]
 top_module = "cv32e40p_core"
 
+# Verilog module parameter overrides — emitted as p_<NAME> on the Instance.
+# Override any of these from Python via
+# `load_wrapper_from_toml("cv32e40p.toml", parameters={"FPU": 1})`.
+[parameters]
+COREV_PULP       = 0
+COREV_CLUSTER    = 0
+FPU              = 0    # keep 0 to avoid pulling in the FPU wrapper
+ZFINX            = 0
+NUM_MHPMCOUNTERS = 1
+
 [clocks]
 sys = "clk_i"                 # wrapper generates i_clk_i = ClockSignal()
 
@@ -241,7 +251,6 @@ MySoC = MySoC
 
 ## Caveats
 
-- **Parameters aren't set by the wrapper.** CV32E40P uses its module defaults (`FPU = 0`, `COREV_PULP = 0`, `COREV_CLUSTER = 0`). If you need different values, you'd either need to extend the wrapper or add an `Instance(..., p_FPU=1, ...)` manually.
 - **All module ports must appear in `map`.** Unmapped ports will not be connected (the wrapper only wires what you listed).
 - **APU/FPU ports exist even when `FPU = 0`** — they must still be wired or tied off. If you don't need the FPU, tie `apu_gnt_i = 0`, `apu_rvalid_i = 0`, `apu_result_i = 0`, `apu_flags_i = 0` in your design and leave the output APU signals unconnected (they'll be driven but go nowhere).
 - **Debug interface:** tie `debug_req_i = 0` and ignore `debug_*_o` outputs unless you're wiring up a JTAG debug transport.
