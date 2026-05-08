@@ -5,6 +5,8 @@ Training materials for learning the [ChipFlow platform](https://build.chipflow.c
 ## What's included
 
 - **[Creating a Design for Use with the ChipFlow Platform](getting-started-design.md)** — how to create a new design from scratch for the ChipFlow platform
+- **[Hard-Macro Builds (`package = "block"`)](block-package.md)** — produce a LEF + Liberty + GDS + blackbox stub for a parent chip, instead of a packaged chip
+- **[Using Hard Macros (`load_blackbox_wrapper`)](using-hard-macros.md)** — instantiate NDA / third-party hard macros (or your own block builds) inside an Amaranth design
 - **[Wrapping External RTL](wrapping-external-rtl.md)** — integrating existing Verilog or SystemVerilog modules into an Amaranth design (manual `Instance`)
 - **[`RTLWrapper` (TOML-based wrapping)](rtl-wrapper.md)** — higher-level wrapper with auto-mapping and sv2v preprocessing
 - **[Wrapping CV32E40P](cv32e40p-example.md)** — worked example: wrapping the OpenHW Group RISC-V core with sv2v and `RTLWrapper`
@@ -37,6 +39,8 @@ chipflow-training/
 ├── Makefile                    # Build commands
 ├── pyproject.toml              # Python dependencies
 ├── getting-started-design.md   # How to write a new design
+├── block-package.md            # Hard-macro / IP block builds
+├── using-hard-macros.md        # Instantiating hard macros via load_blackbox_wrapper
 ├── wrapping-external-rtl.md    # Wrapping Verilog / SystemVerilog IP (manual Instance)
 ├── rtl-wrapper.md              # TOML-based RTLWrapper reference
 ├── cv32e40p-example.md         # CV32E40P worked example

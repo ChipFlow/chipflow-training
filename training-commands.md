@@ -92,10 +92,12 @@ gh auth login
 
 Follow the prompts to authenticate with your GitHub account.
 
-**Important:** After logging in, add the `user` scope (required for ChipFlow to read your email):
+**Important:** After logging in, add the `user:email` scope (required for ChipFlow to read your verified email):
 ```bash
-gh auth refresh -h github.com -s user
+gh auth refresh -h github.com -s user:email
 ```
+
+> A later `gh auth refresh` (or VS Code re-auth) without `-s user:email` can silently drop this scope. If a previously working `chipflow auth login` starts complaining about authentication, re-run the command above.
 
 ---
 
@@ -248,9 +250,26 @@ rm upcounter/pins.lock
 CHIPFLOW_ROOT=upcounter uv run chipflow pin lock
 ```
 
+### Inspecting and rearranging the allocation
+
+After `chipflow pin lock` you can inspect or tweak the result without hand-editing JSON:
+
+```bash
+# Show the allocation as a text table (works for any package type)
+CHIPFLOW_ROOT=upcounter uv run chipflow pin show
+
+# Render an SVG layout (Quad/Block packages only) and write it to a file
+CHIPFLOW_ROOT=upcounter uv run chipflow pin show -f svg -o upcounter-pinout.svg
+
+# Swap two pin assignments — useful for matching a board layout
+CHIPFLOW_ROOT=upcounter uv run chipflow pin swap 17 42
+```
+
+`pin swap` operates on integer-pin packages (Quad, Block) and refuses to move bringup pins (clock, reset, JTAG, power) — those stay at fixed slots so PCB-level board bringup remains predictable.
+
 ### Notes
 
-- Pin assignment is **automatic** — you cannot manually assign specific signals to specific pins.
+- Pin assignment is **automatic** — you cannot manually assign specific signals to specific pins, but you can rearrange the result with `chipflow pin swap`.
 - The default package is `pga144`, which has 144 total pins. Some are reserved for system use (clock, reset, JTAG, power rails), leaving roughly 120 pins available for your design's I/O. Other packages can be added by request — contact the ChipFlow team.
 - Pins are numbered anti-clockwise starting from pin 1 at the top-left corner.
 - The `pins.lock` file should be **committed to version control** so that everyone on the team works with the same pinout.
@@ -311,6 +330,8 @@ After `chipflow silicon prepare`, local build outputs are in:
 ls upcounter/build/
 ```
 
+`chipflow silicon submit` packs the design RTLIL, `pins.lock`, and a `manifest.json` into a single `bundle.zip` next to the RTLIL — that's what gets uploaded to the platform. Useful to know if you're inspecting the build folder or want a self-contained artifact you can replay later.
+
 ---
 
 ## Part 6: Clean Up
@@ -345,6 +366,8 @@ make clean
 | Command | What it does |
 |---------|-------------|
 | `chipflow pin lock` | Generate deterministic pin assignments (pins.lock) |
+| `chipflow pin show [-f text\|svg] [-o FILE]` | Display the current allocation (SVG for Quad/Block packages) |
+| `chipflow pin swap <a> <b>` | Exchange two pin assignments in pins.lock (Quad/Block packages, non-bringup pins) |
 | `chipflow silicon prepare` | Synthesise design to RTLIL locally |
 | `chipflow silicon submit` | Submit RTLIL to cloud platform for backend build |
 | `chipflow silicon submit --wait` | Submit and stream build logs until complete |
@@ -405,13 +428,24 @@ Other processes may be available on request. If your target process is not yet s
 
 ---
 
+## Build modes
+
+| Mode | `package` value | Output | Doc |
+|------|----------------|--------|-----|
+| Packaged chip | `pga144`, … | GDS for fab | [Creating a Design](getting-started-design.md) |
+| Hard macro / IP block | `block` | GDS + LEF + Liberty `.lib` + blackbox `.bb.v` | [Hard-Macro Builds](block-package.md) |
+
+---
+
 ## Troubleshooting
 
 ### "Authentication failed" or "Could not retrieve email from GitHub"
 
+If chipflow-lib prints `Your gh CLI token is missing the user:email scope`, your `gh` token has lost the scope (commonly after `gh auth refresh` without `-s user:email`, or a VS Code re-auth):
+
 ```bash
-# Ensure gh has the user scope (required for ChipFlow to read your email)
-gh auth refresh -h github.com -s user
+# Add the user:email scope back
+gh auth refresh -h github.com -s user:email
 
 # Then re-login with ChipFlow
 CHIPFLOW_ROOT=upcounter uv run chipflow auth login
