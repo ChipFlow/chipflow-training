@@ -28,9 +28,10 @@ Required for silicon builds.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `process` | enum | **Yes** | — | Target manufacturing process |
-| `package` | string | **Yes** | — | Package identifier (e.g. `"pga144"`) |
+| `package` | string | **Yes** | — | Package identifier (e.g. `"pga144"`, `"block"`) |
 | `power` | dict of voltages | No | `{}` | Power domain voltages |
 | `debug` | dict of booleans | No | `None` | Debug configuration flags |
+| `block` | table | No (Yes when `package = "block"`) | `None` | Per-project block dimensions for hard-macro builds — see [`[chipflow.silicon.block]`](#chipflowsiliconblock) |
 
 **Allowed `process` values:**
 
@@ -39,6 +40,51 @@ Required for silicon builds.
 | `ihp_sg13g2` | IHP 130nm SiGe BiCMOS open-source process |
 
 **Voltage format:** float or string with optional `V` suffix (e.g. `1.8`, `"1.8V"`, `"1.8v"`).
+
+---
+
+### `[chipflow.silicon.block]`
+
+Required when `package = "block"`, ignored otherwise. Used for hard-macro deliverables — see [Hard-Macro Builds](block-package.md).
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `width` | integer | **Yes** | — | Pin slots on the N and S edges |
+| `height` | integer | **Yes** | — | Pin slots on the W and E edges |
+
+```toml
+[chipflow.silicon]
+process = "ihp_sg13g2"
+package = "block"
+
+[chipflow.silicon.block]
+width  = 50
+height = 80
+```
+
+`width`/`height` are pin-slot counts, not microns — the backend translates them using the process's pin pitch.
+
+---
+
+### `[chipflow.silicon.macros]`
+
+Optional. Declares hard macros (NDA SRAMs, vendor IP, PLLs, blocks produced by an earlier `package = "block"` build) for inclusion in the build. See [Using Hard Macros](using-hard-macros.md).
+
+Each entry is keyed by a **logical name** (used from Python as `load_blackbox_wrapper("<logical_name>", ...)`) and points at a `*.blackbox.json` produced by [`macrostrip`](https://github.com/ChipFlow/macrostrip):
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `blackbox` | path | **Yes** | — | Path to a `*.blackbox.json` describing the macro. Relative paths resolve against `CHIPFLOW_ROOT`. |
+
+```toml
+[chipflow.silicon.macros.sram_64x64]
+blackbox = "vendor/ihp/sram_64x64.blackbox.json"
+
+[chipflow.silicon.macros.pll_core]
+blackbox = "vendor/pll/pll_core.blackbox.json"
+```
+
+The blackbox JSON itself carries paths to companion artifacts (LEF, Liberty, frame-view or real GDS, Verilog stub), interpreted relative to the JSON's own directory. At submit time those artifacts are packed into `bundle.zip` under `macros/<logical_name>/`.
 
 ---
 
