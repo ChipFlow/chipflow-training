@@ -441,7 +441,7 @@ The Makefile in this repository sets `CHIPFLOW_ROOT` automatically for each desi
 | IHP 130nm SiGe BiCMOS | `ihp_sg13g2` |
 | GlobalFoundries 180nm MCU | `gf180mcu` |
 
-Both processes include automatic SRAM inference — declare an Amaranth `Memory(...)` of appropriate depth/width and the build flow picks the right macro from the PDK's library.
+Both processes include automatic SRAM inference — declare a memory in your design (an Amaranth `Memory(...)`, a Verilog `reg`-array memory, etc.) of appropriate depth/width and the build flow picks the right macro from the PDK's library.
 
 Other processes may be available on request. If your target process is not yet supported, the ChipFlow team can work with you to port it to the platform — contact us for details.
 
