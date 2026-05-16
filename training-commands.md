@@ -208,11 +208,27 @@ When `CHIPFLOW_API_KEY` is set, chipflow-lib uses it directly and skips all othe
 cat ~/.config/chipflow/credentials
 ```
 
+The credentials file is keyed by origin (the platform URL you authenticated against), so a key for `https://build.chipflow.com` and one for a staging endpoint coexist without overwriting each other:
+
+```json
+{
+  "origins": {
+    "https://build.chipflow.com": { "api_key": "..." }
+  }
+}
+```
+
+Legacy single-key files from older chipflow-lib versions are migrated automatically on first use — no manual cleanup needed.
+
+`chipflow auth login` always re-authenticates and re-mints the key for its target origin, even when a cached key is already present. This avoids silently returning a stale key after switching environments.
+
 ### Logout (removes saved credentials from Option A)
 
 ```bash
 uv run chipflow auth logout
 ```
+
+`logout` only removes the entry for the current origin; keys for other origins stay in place.
 
 ---
 
@@ -423,6 +439,9 @@ The Makefile in this repository sets `CHIPFLOW_ROOT` automatically for each desi
 | Process | Value in chipflow.toml |
 |---------|----------------------|
 | IHP 130nm SiGe BiCMOS | `ihp_sg13g2` |
+| GlobalFoundries 180nm MCU | `gf180mcu` |
+
+Both processes include automatic SRAM inference — declare an Amaranth `Memory(...)` of appropriate depth/width and the build flow picks the right macro from the PDK's library.
 
 Other processes may be available on request. If your target process is not yet supported, the ChipFlow team can work with you to port it to the platform — contact us for details.
 
