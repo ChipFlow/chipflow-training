@@ -38,6 +38,7 @@ Required for silicon builds.
 | Value | Description |
 |-------|-------------|
 | `ihp_sg13g2` | IHP 130nm SiGe BiCMOS open-source process |
+| `gf180mcu` | GlobalFoundries 180nm MCU open-source PDK — four-size SRAM IP available for automatic memory inference |
 
 **Voltage format:** float or string with optional `V` suffix (e.g. `1.8`, `"1.8V"`, `"1.8v"`).
 
