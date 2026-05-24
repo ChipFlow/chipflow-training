@@ -89,6 +89,88 @@ The blackbox JSON itself carries paths to companion artifacts (LEF, Liberty, fra
 
 ---
 
+### `[chipflow.backend]`
+
+Optional. Free-form parameters passed through to the ChipFlow cloud backend. Everything under this table is copied verbatim into the submission bundle's `manifest.json` under the `backend` key — `chipflow-lib` does no validation. The backend owns the schema, so new knobs can be exposed without a chipflow-lib release.
+
+When the table is empty or absent, the `backend` key is omitted from the manifest entirely.
+
+The currently documented knobs are below. For the build-mode switch (`full` vs `synth_only`), see [Build modes](training-commands.md#build-modes) — that one is set via CLI flag or environment variable, not under this table.
+
+#### `[chipflow.backend.check.drc]`
+
+Controls DRC sign-off on the post-route GDS. The DRC check has two independent engines — the foundry-shipped KLayout decks (gated by `enable` + `level`) and Magic DRC (gated by `magic`). Either, both, or neither can run on any given build.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `enable` | bool | No | `false` | `true` runs KLayout DRC against the PDK's deck list. |
+| `level` | string | No | `"default"` | KLayout deck tier (PDK-specific — see below). Ignored when `enable = false`. |
+| `magic` | bool | No | `false` | `true` also runs Magic DRC (gf180mcu only). Independent of `enable`. |
+
+**Allowed `level` values per process:**
+
+| Process | Level | What it runs |
+|---------|-------|--------------|
+| `gf180mcu` | `fast` | Antenna check only — quickest sanity check. |
+|  | `default` | Main DRC deck + antenna. The everyday choice. |
+|  | `signoff` | Main DRC + antenna + density rules. Use for tape-out. |
+
+```toml
+[chipflow.backend.check.drc]
+enable = true              # KLayout decks
+level  = "default"
+magic  = true              # Magic DRC as a second-opinion engine
+```
+
+When enabled, each engine's report lands in the build's `outputs.zip`:
+
+- KLayout decks → `drc_<deck_name>.lyrdb` (one file per deck, openable in the KLayout GUI)
+- Magic DRC → `drc_magic` (`magic_drc.rpt` text report)
+
+#### `[chipflow.backend.check.lvs]`
+
+Controls KLayout LVS sign-off (post-route GDS vs synthesised netlist).
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `enable` | bool | No | `false` | `true` runs LVS. |
+
+```toml
+[chipflow.backend.check.lvs]
+enable = true
+```
+
+Both checks are **opt-in** — a build with no `[chipflow.backend.check.*]` entries skips them and finishes faster. Turn them on for tape-out-grade builds, leave them off during early iteration.
+
+#### `[chipflow.backend.fill]`
+
+Controls post-route metal fill (added to satisfy minimum metal-density rules). Currently meaningful only for `gf180mcu` — the `signoff` DRC level enforces ≥30% coverage on metals M1–M5 and ≥14% on Poly2, which raw designs almost never hit without added fill.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `magic` | bool | No | `false` | `true` runs Magic's metal-fill on the post-PnR GDS and merges the result into the final layout. |
+
+```toml
+[chipflow.backend.fill]
+magic = true
+```
+
+Fill runs before DRC, so a typical tape-out config combines all three knobs:
+
+```toml
+[chipflow.backend.check.drc]
+enable = true
+level  = "signoff"
+
+[chipflow.backend.check.lvs]
+enable = true
+
+[chipflow.backend.fill]
+magic = true
+```
+
+---
+
 ### `[chipflow.simulation]`
 
 | Field | Type | Required | Default | Description |

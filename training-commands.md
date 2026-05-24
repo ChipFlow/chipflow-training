@@ -327,6 +327,18 @@ CHIPFLOW_ROOT=upcounter uv run chipflow silicon submit --wait
 
 The `--wait` flag keeps the terminal open and streams build logs until the build finishes.
 
+### Fast iteration with `--build-mode synth_only`
+
+For checking that a design synthesises before paying the cost of place-and-route, pass `--build-mode synth_only`:
+
+```bash
+CHIPFLOW_ROOT=upcounter uv run chipflow silicon submit --build-mode synth_only --wait
+```
+
+`synth_only` runs synthesis and area reporting in the cloud, then stops — no P&R, no GDS, no LVS. Useful when you're iterating on RTL changes and only need to know whether the design still elaborates and synthesises cleanly. The default `full` mode runs the complete RTL-to-GDS flow.
+
+The same knob is also settable via the `CHIPFLOW_BUILD_MODE` environment variable. See [Build modes](#build-modes) for the full picture.
+
 ---
 
 ## Part 5: View Build Results
@@ -336,7 +348,7 @@ The `--wait` flag keeps the terminal open and streams build logs until the build
 Open https://build.chipflow.com in your browser. You will see your builds listed with:
 - Build status (running / success / failed)
 - Build logs (click to view real-time streaming logs)
-- Download links for: GDS file, build report (JSON), PNG renders, post-PnR Verilog
+- Download links: the GDS, and an `outputs.zip` containing the LEF, Liberty `.lib`, post-PnR Verilog, and — when sign-off checks were enabled — per-deck DRC reports (`drc_<deck>.lyrdb`, openable in the KLayout GUI) plus Magic's `magic_drc.rpt`.
 
 ### Build outputs locally
 
@@ -387,6 +399,7 @@ make clean
 | `chipflow silicon prepare` | Synthesise design to RTLIL locally |
 | `chipflow silicon submit` | Submit RTLIL to cloud platform for backend build |
 | `chipflow silicon submit --wait` | Submit and stream build logs until complete |
+| `chipflow silicon submit --build-mode {full,synth_only}` | Pick build mode — `synth_only` skips P&R/GDS/LVS for fast RTL iteration |
 | `chipflow auth login` | Authenticate with the platform |
 | `chipflow auth logout` | Remove saved credentials |
 
@@ -447,12 +460,57 @@ Other processes may be available on request. If your target process is not yet s
 
 ---
 
-## Build modes
+## Build targets
 
-| Mode | `package` value | Output | Doc |
-|------|----------------|--------|-----|
+The `package` field in `chipflow.toml` selects what gets produced:
+
+| Target | `package` value | Output | Doc |
+|--------|----------------|--------|-----|
 | Packaged chip | `pga144`, … | GDS for fab | [Creating a Design](getting-started-design.md) |
 | Hard macro / IP block | `block` | GDS + LEF + Liberty `.lib` + blackbox `.bb.v` | [Hard-Macro Builds](block-package.md) |
+
+---
+
+## Build modes
+
+Independent of the build target, each submission runs the cloud backend in one of two modes:
+
+| Mode | What runs | When to use |
+|------|-----------|-------------|
+| `full` (default) | Synthesis + P&R + GDS + LVS | Final deliverables; anything you intend to tape out. |
+| `synth_only` | Synthesis + area report only | Fast iteration — confirm RTL still elaborates and synthesises before paying for the slow stages. |
+
+Two ways to set the mode, in order of precedence:
+
+1. CLI flag — `chipflow silicon submit --build-mode synth_only`
+2. Environment variable — `CHIPFLOW_BUILD_MODE=synth_only`
+
+The CLI flag is convenient for one-off experiments; the env var works well when you want a whole shell session (e.g. an iteration loop) to default to synth-only without rewriting commands.
+
+---
+
+## Sign-off checks (DRC / LVS) and fill
+
+DRC (Design Rule Check), LVS (Layout-vs-Schematic), and metal fill run on the cloud backend only when explicitly opted in from the design's `chipflow.toml`. A complete tape-out-grade configuration for `gf180mcu`:
+
+```toml
+[chipflow.backend.check.drc]
+enable = true            # KLayout DRC decks
+level  = "signoff"       # gf180mcu: fast | default | signoff
+magic  = true            # also run Magic DRC (gf180mcu only)
+
+[chipflow.backend.check.lvs]
+enable = true
+
+[chipflow.backend.fill]
+magic = true             # add metal fill (needed to clear gf180mcu density rules)
+```
+
+Every knob defaults to off — leaving them off during early iteration keeps builds fast. For tape-out you typically want all three on (fill runs first, then DRC checks both the layout and the density it produced; LVS confirms the netlist still matches). DRC reports ship in `outputs.zip` (`drc_<deck>.lyrdb` per KLayout deck, `magic_drc.rpt` for Magic).
+
+See [`[chipflow.backend]`](chipflow-toml-reference.md#chipflowbackend) for the full schema.
+
+These checks only run in `full` build mode — they're skipped automatically by `--build-mode synth_only` since there's no GDS to check.
 
 ---
 
